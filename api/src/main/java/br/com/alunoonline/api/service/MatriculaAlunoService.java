@@ -1,6 +1,7 @@
 package br.com.alunoonline.api.service;
 
 import br.com.alunoonline.api.MatriculaAlunoStatusEnum;
+import br.com.alunoonline.api.dto.AtualizarNotasRequestDTO;
 import br.com.alunoonline.api.model.MatriculaAluno;
 import br.com.alunoonline.api.repository.MatriculaAlunoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,38 @@ public class MatriculaAlunoService {
     MatriculaAlunoRepository matriculaAlunoRepository;
 
     private static final Double MEDIA_PARA_APROVACAO = 7.0;
+
+    // ═══════════════ ATUALIZAR NOTAS ═══════════════
+    public void atualizarNotas(Long id,
+                               AtualizarNotasRequestDTO dto) {
+
+        // 1) Buscar matrícula (mesmo padrão do trancar)
+        MatriculaAluno matricula =
+                matriculaAlunoRepository.findById(id)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Matricula não encontrada"));
+
+        // 2) Só atualiza o que veio preenchido (PATCH parcial!)
+        if (dto.getNota1() != null)
+            matricula.setNota1(dto.getNota1());
+        if (dto.getNota2() != null)
+            matricula.setNota2(dto.getNota2());
+
+        // 3) Se as 2 notas existem, calcula média e define status
+        if (matricula.getNota1() != null
+                && matricula.getNota2() != null) {
+            Double media = (matricula.getNota1()
+                    + matricula.getNota2()) / 2;
+            matricula.setStatus(
+                    media >= MEDIA_PARA_APROVACAO
+                            ? MatriculaAlunoStatusEnum.APROVADO
+                            : MatriculaAlunoStatusEnum.REPROVADO);
+        }
+
+        // 4) Salvar a matrícula atualizada
+        matriculaAlunoRepository.save(matricula);
+    }
 
 
     public void criarMatricula(MatriculaAluno matriculaAluno) {
